@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Sky } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
+import { Effects } from './Effects'
 import { Hud } from './Hud'
 import { Player } from './Player'
 import { World } from './World'
@@ -37,6 +38,7 @@ export default function App() {
             <World />
             <Player />
           </Physics>
+          <Effects />
         </Suspense>
       </Canvas>
       <Hud />

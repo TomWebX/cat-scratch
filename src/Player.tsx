@@ -4,7 +4,7 @@ import { CapsuleCollider, RigidBody, useRapier, type RapierRigidBody } from '@re
 import { type Group, Vector3 } from 'three'
 import { inScratchCone, moveDirection } from './game'
 import { nextLine, speak } from './narrator'
-import { props } from './registry'
+import { enemies, playerPos, props } from './registry'
 import { useGame } from './store'
 
 const WALK = 4.5
@@ -64,9 +64,10 @@ export function Player() {
 
   function scratch() {
     const b = body.current
-    if (!b || cooldown.current > 0) return
+    if (!b || cooldown.current > 0 || useGame.getState().dead) return
     cooldown.current = SCRATCH_COOLDOWN
     scratchTime.current = 0.18
+    facing.current = look.current.yaw
     const p = b.translation()
     const fx = -Math.sin(facing.current)
     const fz = -Math.cos(facing.current)
@@ -78,6 +79,12 @@ export function Player() {
       const m = target.mass()
       target.applyImpulse({ x: fx * 5 * m, y: 3 * m, z: fz * 5 * m }, true)
       target.applyTorqueImpulse({ x: (Math.random() - 0.5) * m, y: (Math.random() - 0.5) * m, z: (Math.random() - 0.5) * m }, true)
+      hits++
+    })
+    enemies.forEach((e) => {
+      const t = e.body.translation()
+      if (!inScratchCone({ x: p.x, z: p.z }, facing.current, { x: t.x, z: t.z }, SCRATCH_RANGE + 0.4, 1.1)) return
+      e.hurt(1, fx, fz)
       hits++
     })
     if (hits > 0) {
@@ -94,6 +101,23 @@ export function Player() {
     if (!b || !useGame.getState().started) return
     const k = keys.current
     const { yaw, pitch } = look.current
+
+    const game = useGame.getState()
+    if (game.respawnRequested) {
+      b.setTranslation({ x: 0, y: 2, z: 6 }, true)
+      b.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      game.clearRespawn()
+    }
+    const t0 = b.translation()
+    playerPos.x = t0.x
+    playerPos.y = t0.y
+    playerPos.z = t0.z
+    // Aus der Welt gefallen: zurücksetzen
+    if (t0.y < -20) game.respawn()
+    if (game.dead) {
+      b.setLinvel({ x: 0, y: b.linvel().y, z: 0 }, true)
+      return
+    }
 
     const forward = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0)
     const right = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0)

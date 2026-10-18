@@ -24,6 +24,11 @@ body,
   font-weight: 800;
 }
 
+.hud .hearts {
+  font-size: 26px;
+  margin-top: 4px;
+}
+
 .hud .help {
   position: absolute;
   bottom: 14px;

@@ -6,7 +6,10 @@ Konzept: [docs/CONCEPT.md](docs/CONCEPT.md)
 
 ## Prototyp-Stand
 - Third-Person-Katze mit Maus-Kamera, Sprinten und Doppelsprung
-- Kratzangriff (Linksklick) stößt physikalische Objekte um und füllt das Chaos-Meter
+- Kratzangriff (Linksklick) richtet die Katze nach der Kamera aus, stößt Objekte um und verletzt Gegner
+- Wachhunde mit Verfolgung, Biss, Rückstoß und Treffer-/Todeseffekt (Splatter oder Sterne)
+- Leben (Herzen), Unverwundbarkeit nach Treffer, Game-Over mit Respawn
+- Chaos-Meter und Kill-Zähler
 - Kleine Testwelt (Haus, Zaun, Bäume, Kisten, Fässer, Vasen)
 - TTS-Erzähler (Web Speech API), Splatter-Schalter (Taste `B`)
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useGame } from './store'
+import { MAX_HP, useGame } from './store'
 
 function PopupItem({ id, text, x, y }: { id: number; text: string; x: number; y: number }) {
   const remove = useGame((s) => s.removePopup)
@@ -15,7 +15,11 @@ function PopupItem({ id, text, x, y }: { id: number; text: string; x: number; y:
 }
 
 export function Hud() {
-  const { chaos, splatter, started, popups, setStarted, toggleSplatter } = useGame()
+  const { chaos, kills, hp, dead, splatter, started, popups, setStarted, toggleSplatter, respawn } = useGame()
+
+  useEffect(() => {
+    if (dead) document.exitPointerLock()
+  }, [dead])
 
   const start = () => {
     setStarted(true)
@@ -24,7 +28,24 @@ export function Hud() {
 
   return (
     <div className={`hud ${splatter ? 'splat' : ''}`}>
-      <div className="chaos">Chaos: {chaos}</div>
+      <div className="chaos">
+        Chaos: {chaos} · Hunde besiegt: {kills}
+        <div className="hearts">{Array.from({ length: MAX_HP }, (_, i) => (i < hp ? '❤️' : '🖤')).join(' ')}</div>
+      </div>
+      {dead && (
+        <div className="overlay">
+          <h1>Leben verloren!</h1>
+          <p>Katzen haben neun Leben. Timmi Tatz hat gerade eines verbraucht.</p>
+          <button
+            onClick={() => {
+              respawn()
+              Promise.resolve(document.querySelector('canvas')?.requestPointerLock()).catch(() => {})
+            }}
+          >
+            Nochmal
+          </button>
+        </div>
+      )}
       {popups.map((p) => (
         <PopupItem key={p.id} {...p} />
       ))}

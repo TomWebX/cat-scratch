@@ -1,5 +1,6 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier'
 import { useMemo } from 'react'
+import { Dog } from './Dog'
 import { props } from './registry'
 
 type Shape = 'box' | 'barrel' | 'vase'
@@ -120,6 +121,10 @@ export function World() {
       <Tree pos={[12, 0, -4]} />
       <Tree pos={[-14, 0, -8]} />
       <Tree pos={[14, 0, 4]} />
+
+      <Dog position={[-6, 1, -2]} />
+      <Dog position={[8, 1, -8]} />
+      <Dog position={[0, 1, -18]} maxHp={4} />
 
       {defs.map((d) => (
         <Prop key={d.id} {...d} />
