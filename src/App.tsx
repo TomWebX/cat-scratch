@@ -6,7 +6,6 @@ import { Effects } from './Effects'
 import { Hud } from './Hud'
 import { Player } from './Player'
 import { World } from './World'
-import { speak } from './narrator'
 import { useGame } from './store'
 
 export default function App() {
@@ -45,7 +44,3 @@ export default function App() {
     </>
   )
 }
-
-useGame.subscribe((s, prev) => {
-  if (s.started && !prev.started) setTimeout(() => speak('Timmi Tatz hat Hunger. Das Abendessen ist weg. Jemand wird dafür bezahlen.'), 300)
-})

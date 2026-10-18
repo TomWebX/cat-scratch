@@ -36,3 +36,43 @@ export function inScratchCone(
   const dot = (dx * fx + dz * fz) / dist
   return Math.acos(Math.min(1, Math.max(-1, dot))) <= halfAngle
 }
+
+/** Kletterbare Fläche als Rechteck im Grundriss; optional nur von einer Seite (Normale). */
+export interface Climbable {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+  top: number
+  nx?: number
+  nz?: number
+}
+
+const CAT_RADIUS = 0.25
+const CAT_HALF_HEIGHT = 0.45
+
+/** Findet eine Fläche, an der die Katze gerade hochklettert (läuft gegen die Wand, Füße unterhalb der Oberkante). */
+export function findClimbable(
+  list: readonly Climbable[],
+  px: number,
+  py: number,
+  pz: number,
+  dirX: number,
+  dirZ: number,
+): Climbable | null {
+  if (dirX === 0 && dirZ === 0) return null
+  const feet = py - CAT_HALF_HEIGHT
+  for (const c of list) {
+    if (feet > c.top + 0.05 || feet < -0.2) continue
+    const cx = Math.min(c.maxX, Math.max(c.minX, px))
+    const cz = Math.min(c.maxZ, Math.max(c.minZ, pz))
+    const d = Math.hypot(px - cx, pz - cz)
+    if (d < 1e-6 || d > CAT_RADIUS + 0.2) continue
+    const nx = (px - cx) / d
+    const nz = (pz - cz) / d
+    if (c.nx !== undefined && c.nz !== undefined && nx * c.nx + nz * c.nz < 0.5) continue
+    if (-(dirX * nx + dirZ * nz) < 0.3) continue
+    return c
+  }
+  return null
+}

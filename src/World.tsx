@@ -1,7 +1,15 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { Bone, Bowl } from './Collectibles'
 import { Dog } from './Dog'
-import { props } from './registry'
+import type { Climbable } from './game'
+import { climbables, props } from './registry'
+
+// Stabile Objekte, damit Effekte nicht bei jedem Render neu laufen
+const HOUSE_BACK = { top: 3.4, normal: [0, -1] as [number, number] }
+const HOUSE_WEST = { top: 3.4, normal: [-1, 0] as [number, number] }
+const HOUSE_EAST = { top: 3.4, normal: [1, 0] as [number, number] }
+const POST = { top: 3.2 }
 
 type Shape = 'box' | 'barrel' | 'vase'
 
@@ -47,7 +55,34 @@ function Prop({ shape, pos, color }: PropDef) {
   )
 }
 
-function Wall({ pos, size, color = '#e8dcc8' }: { pos: [number, number, number]; size: [number, number, number]; color?: string }) {
+function Wall({
+  pos,
+  size,
+  color = '#e8dcc8',
+  climb,
+}: {
+  pos: [number, number, number]
+  size: [number, number, number]
+  color?: string
+  climb?: { top: number; normal?: [number, number] }
+}) {
+  useEffect(() => {
+    if (!climb) return
+    const c: Climbable = {
+      minX: pos[0] - size[0] / 2,
+      maxX: pos[0] + size[0] / 2,
+      minZ: pos[2] - size[2] / 2,
+      maxZ: pos[2] + size[2] / 2,
+      top: climb.top,
+      nx: climb.normal?.[0],
+      nz: climb.normal?.[1],
+    }
+    climbables.push(c)
+    return () => {
+      climbables.splice(climbables.indexOf(c), 1)
+    }
+  }, [climb, pos, size])
+
   return (
     <RigidBody type="fixed" position={pos} colliders={false}>
       <CuboidCollider args={[size[0] / 2, size[1] / 2, size[2] / 2]} />
@@ -105,13 +140,20 @@ export function World() {
         <meshStandardMaterial color="#555" />
       </mesh>
 
-      {/* Haus */}
-      <Wall pos={[0, 1.5, -14]} size={[10, 3, 0.3]} color="#d9a066" />
-      <Wall pos={[-5, 1.5, -10]} size={[0.3, 3, 8]} color="#d9a066" />
-      <Wall pos={[5, 1.5, -10]} size={[0.3, 3, 8]} color="#d9a066" />
+      {/* Haus: Außenwände sind kletterbar, das Dach schließt bündig ab */}
+      <Wall pos={[0, 1.5, -14]} size={[10, 3, 0.3]} color="#d9a066" climb={HOUSE_BACK} />
+      <Wall pos={[-5, 1.5, -10]} size={[0.3, 3, 8]} color="#d9a066" climb={HOUSE_WEST} />
+      <Wall pos={[5, 1.5, -10]} size={[0.3, 3, 8]} color="#d9a066" climb={HOUSE_EAST} />
       <Wall pos={[-3.5, 1.5, -6]} size={[3, 3, 0.3]} color="#d9a066" />
       <Wall pos={[3.5, 1.5, -6]} size={[3, 3, 0.3]} color="#d9a066" />
-      <Wall pos={[0, 3.2, -10]} size={[10.6, 0.4, 8.6]} color="#a0442c" />
+      <Wall pos={[0, 3.2, -10]} size={[10.3, 0.4, 8.3]} color="#a0442c" />
+
+      {/* Kratzpfosten */}
+      <Wall pos={[10, 1.6, 5]} size={[1, 3.2, 1]} color="#b08040" climb={POST} />
+      <Bone position={[10, 3.8, 5]} />
+      <Bone position={[0, 3.9, -10]} />
+      <Bone position={[-11, 0.9, -9]} />
+      <Bowl position={[0, 0.15, -12.5]} />
 
       {/* Zaun */}
       {Array.from({ length: 16 }, (_, i) => (

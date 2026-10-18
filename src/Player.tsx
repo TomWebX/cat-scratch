@@ -2,14 +2,15 @@ import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CapsuleCollider, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { type Group, Vector3 } from 'three'
-import { inScratchCone, moveDirection } from './game'
-import { nextLine, speak } from './narrator'
-import { enemies, playerPos, props } from './registry'
+import { findClimbable, inScratchCone, moveDirection } from './game'
+import { nextLine } from './narrator'
+import { climbables, enemies, hitProps, playerPos, props } from './registry'
 import { useGame } from './store'
 
 const WALK = 4.5
 const SPRINT = 8
 const JUMP = 7
+const CLIMB_SPEED = 4
 const SCRATCH_RANGE = 2.2
 const SCRATCH_COOLDOWN = 0.35
 const CAM_DIST = 5
@@ -73,14 +74,17 @@ export function Player() {
     const fz = -Math.cos(facing.current)
     const { splatter, addChaos, addPopup } = useGame.getState()
     let hits = 0
-    props.forEach((target) => {
+    const knockedBefore = hitProps.size
+    props.forEach((target, handle) => {
       const t = target.translation()
       if (!inScratchCone({ x: p.x, z: p.z }, facing.current, { x: t.x, z: t.z }, SCRATCH_RANGE, 1.0)) return
       const m = target.mass()
       target.applyImpulse({ x: fx * 5 * m, y: 3 * m, z: fz * 5 * m }, true)
       target.applyTorqueImpulse({ x: (Math.random() - 0.5) * m, y: (Math.random() - 0.5) * m, z: (Math.random() - 0.5) * m }, true)
+      hitProps.add(handle)
       hits++
     })
+    if (hitProps.size > knockedBefore) useGame.getState().report('props', hitProps.size - knockedBefore)
     enemies.forEach((e) => {
       const t = e.body.translation()
       if (!inScratchCone({ x: p.x, z: p.z }, facing.current, { x: t.x, z: t.z }, SCRATCH_RANGE + 0.4, 1.1)) return
@@ -92,7 +96,9 @@ export function Player() {
       addChaos(10 * hits)
       const words = splatter ? HIT_SPLAT : HIT_CLEAN
       addPopup(words[Math.floor(Math.random() * words.length)])
-      if (Math.floor(before / 100) !== Math.floor((before + 10 * hits) / 100)) speak(nextLine())
+      if (Math.floor(before / 100) !== Math.floor((before + 10 * hits) / 100) && !useGame.getState().subtitle) {
+        useGame.getState().say(nextLine())
+      }
     }
   }
 
@@ -124,7 +130,12 @@ export function Player() {
     const dir = moveDirection(forward, right, yaw)
     const speed = k.has('ShiftLeft') ? SPRINT : WALK
     const vel = b.linvel()
-    b.setLinvel({ x: dir.x * speed, y: vel.y, z: dir.z * speed }, true)
+    const climbing = !!findClimbable(climbables, t0.x, t0.y, t0.z, dir.x, dir.z)
+    b.setLinvel({ x: dir.x * speed, y: climbing ? CLIMB_SPEED : vel.y, z: dir.z * speed }, true)
+    if (visual.current) {
+      visual.current.rotation.order = 'YXZ'
+      visual.current.rotation.x += ((climbing ? 1.25 : 0) - visual.current.rotation.x) * Math.min(1, dt * 14)
+    }
 
     const pos = b.translation()
     const ray = new rapier.Ray({ x: pos.x, y: pos.y, z: pos.z }, { x: 0, y: -1, z: 0 })

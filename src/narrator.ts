@@ -1,8 +1,8 @@
 const LINES = [
-  'Timmi Tatz hat Hunger. Das Abendessen ist weg. Jemand wird dafür bezahlen.',
   'Ein Sofa. Es hat nichts getan. Noch nicht.',
   'Die Vase war unschuldig. Aber auch sehr zerbrechlich.',
   'Chaos ist keine Sünde, sondern ein Lebensstil.',
+  'Man nennt es Vandalismus. Timmi nennt es Innenarchitektur.',
 ]
 
 let lineIndex = 0

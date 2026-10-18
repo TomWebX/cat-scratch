@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { advance, EMPTY_STATS, MISSIONS, type Stats } from './missions'
+import { speak } from './narrator'
 
 export interface Popup {
   id: number
@@ -28,8 +30,15 @@ interface GameState {
   started: boolean
   popups: Popup[]
   bursts: Burst[]
+  stats: Stats
+  missionIndex: number
+  showWin: boolean
+  subtitle: string
   addChaos: (n: number) => void
   addKill: () => void
+  report: (stat: keyof Stats, n?: number) => void
+  say: (text: string) => void
+  dismissWin: () => void
   damage: (n: number) => void
   respawn: () => void
   clearRespawn: () => void
@@ -43,6 +52,7 @@ interface GameState {
 
 let popupId = 0
 let burstId = 0
+let subtitleTimer: ReturnType<typeof setTimeout> | undefined
 
 export const useGame = create<GameState>((set, get) => ({
   chaos: 0,
@@ -55,8 +65,33 @@ export const useGame = create<GameState>((set, get) => ({
   started: false,
   popups: [],
   bursts: [],
+  stats: EMPTY_STATS,
+  missionIndex: 0,
+  showWin: false,
+  subtitle: '',
   addChaos: (n) => set((s) => ({ chaos: s.chaos + n })),
-  addKill: () => set((s) => ({ kills: s.kills + 1 })),
+  addKill: () => {
+    set((s) => ({ kills: s.kills + 1 }))
+    get().report('kills')
+  },
+  say: (text) => {
+    speak(text)
+    set({ subtitle: text })
+    clearTimeout(subtitleTimer)
+    subtitleTimer = setTimeout(() => set({ subtitle: '' }), Math.max(4000, text.length * 75))
+  },
+  report: (stat, n = 1) => {
+    const s = get()
+    const stats = { ...s.stats, [stat]: s.stats[stat] + n }
+    const next = advance(s.missionIndex, stats)
+    set({ stats })
+    if (next === s.missionIndex) return
+    const finished = next >= MISSIONS.length
+    set({ missionIndex: next, showWin: finished })
+    const outro = MISSIONS[next - 1].outro
+    get().say(finished ? outro : `${outro} ${MISSIONS[next].intro}`)
+  },
+  dismissWin: () => set({ showWin: false }),
   damage: (n) => {
     const s = get()
     const now = performance.now()
@@ -67,7 +102,11 @@ export const useGame = create<GameState>((set, get) => ({
   respawn: () => set({ hp: MAX_HP, dead: false, respawnRequested: true, lastHurt: performance.now() }),
   clearRespawn: () => set({ respawnRequested: false }),
   toggleSplatter: () => set((s) => ({ splatter: !s.splatter })),
-  setStarted: (v) => set({ started: v }),
+  setStarted: (v) => {
+    const first = v && !get().started
+    set({ started: v })
+    if (first) setTimeout(() => get().say(MISSIONS[get().missionIndex].intro), 300)
+  },
   addPopup: (text) =>
     set((s) => ({
       popups: [

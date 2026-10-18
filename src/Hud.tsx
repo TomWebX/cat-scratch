@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { MISSIONS } from './missions'
 import { MAX_HP, useGame } from './store'
 
 function PopupItem({ id, text, x, y }: { id: number; text: string; x: number; y: number }) {
@@ -16,14 +17,18 @@ function PopupItem({ id, text, x, y }: { id: number; text: string; x: number; y:
 
 export function Hud() {
   const { chaos, kills, hp, dead, splatter, started, popups, setStarted, toggleSplatter, respawn } = useGame()
+  const { missionIndex, stats, subtitle, showWin, dismissWin } = useGame()
+  const mission = MISSIONS[missionIndex]
 
   useEffect(() => {
-    if (dead) document.exitPointerLock()
-  }, [dead])
+    if (dead || showWin) document.exitPointerLock()
+  }, [dead, showWin])
+
+  const relock = () => Promise.resolve(document.querySelector('canvas')?.requestPointerLock()).catch(() => {})
 
   const start = () => {
     setStarted(true)
-    Promise.resolve(document.querySelector('canvas')?.requestPointerLock()).catch(() => {})
+    relock()
   }
 
   return (
@@ -32,6 +37,27 @@ export function Hud() {
         Chaos: {chaos} · Hunde besiegt: {kills}
         <div className="hearts">{Array.from({ length: MAX_HP }, (_, i) => (i < hp ? '❤️' : '🖤')).join(' ')}</div>
       </div>
+      {started && (
+        <div className="mission">
+          <b>{mission ? `Mission ${missionIndex + 1}: ${mission.title}` : 'Alle Missionen erledigt'}</b>
+          <div>{mission ? `${mission.goal} (${mission.progress(stats)})` : 'Chaos stiften geht immer weiter.'}</div>
+        </div>
+      )}
+      {subtitle && <div className="subtitle">{subtitle}</div>}
+      {showWin && (
+        <div className="overlay">
+          <h1>Geschafft!</h1>
+          <p>Timmi Tatz hat sein Abendessen. Chaos-Punkte: {chaos}</p>
+          <button
+            onClick={() => {
+              dismissWin()
+              relock()
+            }}
+          >
+            Weiter Chaos stiften
+          </button>
+        </div>
+      )}
       {dead && (
         <div className="overlay">
           <h1>Leben verloren!</h1>
@@ -39,7 +65,7 @@ export function Hud() {
           <button
             onClick={() => {
               respawn()
-              Promise.resolve(document.querySelector('canvas')?.requestPointerLock()).catch(() => {})
+              relock()
             }}
           >
             Nochmal
@@ -51,7 +77,7 @@ export function Hud() {
       ))}
       {started && (
         <div className="help">
-          WASD Bewegen · Shift Sprinten · Leertaste Springen (Doppelsprung) · Linksklick Kratzen · B Splatter {splatter ? 'an' : 'aus'}
+          WASD Bewegen · W gegen Wand klettern · Shift Sprinten · Leertaste Springen (2×) · Linksklick Kratzen · B Splatter {splatter ? 'an' : 'aus'}
         </div>
       )}
       {!started && (
