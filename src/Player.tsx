@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { CapsuleCollider, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { type Group, Vector3 } from 'three'
 import { findClimbable, inScratchCone, moveDirection } from './game'
+import { Model } from './Model'
 import { nextLine } from './narrator'
 import { climbables, enemies, hitProps, playerPos, props } from './registry'
 import { useGame } from './store'
@@ -11,6 +12,8 @@ const WALK = 4.5
 const SPRINT = 8
 const JUMP = 7
 const CLIMB_SPEED = 4
+// Die Kenney-Modelle schauen nach +Z, die Spiellogik nach -Z
+const MODEL_YAW = Math.PI
 const SCRATCH_RANGE = 2.2
 const SCRATCH_COOLDOWN = 0.35
 const CAM_DIST = 5
@@ -21,8 +24,8 @@ const HIT_SPLAT = ['RIIIP!', 'SPLAT!', 'FETZ!', 'KRATZ!']
 export function Player() {
   const body = useRef<RapierRigidBody>(null)
   const visual = useRef<Group>(null)
-  const tail = useRef<Group>(null)
   const claw = useRef<Group>(null)
+  const anim = useRef('idle')
   const { world, rapier } = useRapier()
 
   const keys = useRef(new Set<string>())
@@ -163,7 +166,9 @@ export function Player() {
       claw.current.visible = scratchTime.current > 0
       claw.current.rotation.z = (0.18 - scratchTime.current) * 12 - 1
     }
-    if (tail.current) tail.current.rotation.z = Math.sin(state.clock.elapsedTime * 6) * 0.4
+    const moving = dir.x !== 0 || dir.z !== 0
+    anim.current =
+      scratchTime.current > 0 ? 'gesture-positive' : climbing || !grounded ? 'run' : moving ? (speed > WALK ? 'run' : 'walk') : 'idle'
 
     // Dritte-Person-Kamera mit weichem Nachziehen
     const horiz = Math.cos(pitch) * CAM_DIST
@@ -187,46 +192,11 @@ export function Player() {
       linearDamping={0.2}
     >
       <CapsuleCollider args={[0.2, 0.25]} />
-      <group ref={visual} position={[0, -0.25, 0]}>
-        <mesh castShadow position={[0, 0.3, 0]}>
-          <boxGeometry args={[0.45, 0.4, 0.9]} />
-          <meshStandardMaterial color="#e08a2e" />
-        </mesh>
-        <mesh castShadow position={[0, 0.5, -0.55]}>
-          <boxGeometry args={[0.4, 0.35, 0.35]} />
-          <meshStandardMaterial color="#e08a2e" />
-        </mesh>
-        <mesh position={[-0.13, 0.75, -0.55]}>
-          <coneGeometry args={[0.08, 0.16, 4]} />
-          <meshStandardMaterial color="#c4701a" />
-        </mesh>
-        <mesh position={[0.13, 0.75, -0.55]}>
-          <coneGeometry args={[0.08, 0.16, 4]} />
-          <meshStandardMaterial color="#c4701a" />
-        </mesh>
-        <mesh position={[-0.1, 0.55, -0.73]}>
-          <sphereGeometry args={[0.04]} />
-          <meshStandardMaterial color="#222" />
-        </mesh>
-        <mesh position={[0.1, 0.55, -0.73]}>
-          <sphereGeometry args={[0.04]} />
-          <meshStandardMaterial color="#222" />
-        </mesh>
-        <group ref={tail} position={[0, 0.45, 0.45]}>
-          <mesh castShadow position={[0, 0.25, 0.1]} rotation={[0.4, 0, 0]}>
-            <boxGeometry args={[0.1, 0.6, 0.1]} />
-            <meshStandardMaterial color="#c4701a" />
-          </mesh>
+      <group ref={visual}>
+        <group position={[0, -0.45, 0]}>
+          <Model name="cat" height={0.95} rotationY={MODEL_YAW} animRef={anim} />
         </group>
-        {[-0.15, 0.15].flatMap((x) =>
-          [-0.3, 0.3].map((z) => (
-            <mesh key={`${x}${z}`} position={[x, 0.1, z]}>
-              <boxGeometry args={[0.12, 0.2, 0.12]} />
-              <meshStandardMaterial color="#c4701a" />
-            </mesh>
-          )),
-        )}
-        <group ref={claw} position={[0, 0.45, -1.1]} visible={false}>
+        <group ref={claw} position={[0, 0, -0.9]} visible={false}>
           {[-0.15, 0, 0.15].map((x) => (
             <mesh key={x} position={[x, 0, 0]}>
               <boxGeometry args={[0.04, 0.6, 0.02]} />

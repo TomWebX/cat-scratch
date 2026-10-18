@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
 import type { Group } from 'three'
+import { Model } from './Model'
 import { enemies, playerPos } from './registry'
 import { useGame } from './store'
 
@@ -22,6 +23,7 @@ export function Dog({ position, maxHp = 3 }: Props) {
   const stun = useRef(0)
   const biteCd = useRef(0)
   const flash = useRef(0)
+  const anim = useRef('idle')
   const [alive, setAlive] = useState(true)
 
   useFrame((_, dt) => {
@@ -39,8 +41,10 @@ export function Dog({ position, maxHp = 3 }: Props) {
     if (stun.current === 0 && dist < SIGHT && dist > 0.8 && !useGame.getState().dead) {
       b.setLinvel({ x: (dx / dist) * SPEED, y: v.y, z: (dz / dist) * SPEED }, true)
       if (visual.current) visual.current.rotation.y = Math.atan2(-dx, -dz)
+      anim.current = 'run'
     } else if (stun.current === 0) {
       b.setLinvel({ x: 0, y: v.y, z: 0 }, true)
+      anim.current = 'idle'
     }
 
     if (dist < BITE_RANGE && Math.abs(playerPos.y - p.y) < 1.2 && biteCd.current === 0 && stun.current === 0) {
@@ -88,39 +92,8 @@ export function Dog({ position, maxHp = 3 }: Props) {
       friction={0}
     >
       <CapsuleCollider args={[0.25, 0.4]} />
-      <group ref={visual} position={[0, -0.4, 0]}>
-        <mesh castShadow position={[0, 0.6, 0]}>
-          <boxGeometry args={[0.6, 0.55, 1.2]} />
-          <meshStandardMaterial color="#7a5230" />
-        </mesh>
-        <mesh castShadow position={[0, 0.95, -0.75]}>
-          <boxGeometry args={[0.5, 0.45, 0.5]} />
-          <meshStandardMaterial color="#8a6038" />
-        </mesh>
-        <mesh position={[0, 0.85, -1.05]}>
-          <boxGeometry args={[0.3, 0.2, 0.25]} />
-          <meshStandardMaterial color="#3a2a1a" />
-        </mesh>
-        <mesh position={[-0.28, 0.95, -0.6]}>
-          <boxGeometry args={[0.1, 0.3, 0.2]} />
-          <meshStandardMaterial color="#4a3018" />
-        </mesh>
-        <mesh position={[0.28, 0.95, -0.6]}>
-          <boxGeometry args={[0.1, 0.3, 0.2]} />
-          <meshStandardMaterial color="#4a3018" />
-        </mesh>
-        {[-0.2, 0.2].flatMap((x) =>
-          [-0.45, 0.45].map((z) => (
-            <mesh key={`${x}${z}`} position={[x, 0.2, z]}>
-              <boxGeometry args={[0.15, 0.4, 0.15]} />
-              <meshStandardMaterial color="#5a3a20" />
-            </mesh>
-          )),
-        )}
-        <mesh position={[0, 0.8, 0.7]} rotation={[0.8, 0, 0]}>
-          <boxGeometry args={[0.1, 0.1, 0.5]} />
-          <meshStandardMaterial color="#5a3a20" />
-        </mesh>
+      <group ref={visual} position={[0, -0.65, 0]}>
+        <Model name="dog" height={1.1} rotationY={Math.PI} animRef={anim} />
       </group>
     </RigidBody>
   )
